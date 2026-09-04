@@ -64,15 +64,9 @@ export const PackExplorer: React.FC<Props> = ({
         <div className="absolute bottom-[-30%] left-[-10%] w-[350px] h-[350px] bg-purple-500/20 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="space-y-2 z-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-300">
-            <Sparkles className="w-3.5 h-3.5 text-blue-300 animate-pulse" /> Game Học Liệu Tương Tác Kéo Thả
-          </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white/95">
-            Thư Viện Bài Tập Kéo Thả Đáp Án
+            Thư Viện Bài Tập
           </h1>
-          <p className="text-sm text-blue-200/80 leading-relaxed">
-            Hỗ trợ 4 dạng học liệu trực quan: Điền từ vào chỗ trống, Phân loại nhóm, Ghép cặp khái niệm và Sắp xếp quy trình.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto">
