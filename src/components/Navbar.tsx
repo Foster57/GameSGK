@@ -1,11 +1,10 @@
 import React from 'react';
-import { Sparkles, Code, Plus, Layers, BookOpen, Volume2, VolumeX } from 'lucide-react';
+import { Sparkles, Plus, Layers, BookOpen, Volume2, VolumeX } from 'lucide-react';
 import { GameSettings } from '../types';
 
 interface Props {
   activeView: 'explorer' | 'game' | 'editor';
   onNavigate: (view: 'explorer' | 'game' | 'editor') => void;
-  onOpenEmbed: () => void;
   onCreateNew: () => void;
   settings: GameSettings;
   onToggleSound: () => void;
@@ -14,7 +13,6 @@ interface Props {
 export const Navbar: React.FC<Props> = ({
   activeView,
   onNavigate,
-  onOpenEmbed,
   onCreateNew,
   settings,
   onToggleSound,
@@ -62,15 +60,6 @@ export const Navbar: React.FC<Props> = ({
           >
             <Plus className="w-4 h-4 text-purple-400" />
             <span className="hidden sm:inline">Soạn câu hỏi</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenEmbed}
-            className="px-4 py-1.5 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:brightness-110 active:scale-[0.98] text-white text-xs md:text-sm font-bold flex items-center gap-1.5 shadow-lg shadow-blue-900/30 transition border border-white/20"
-          >
-            <Code className="w-4 h-4" />
-            <span>Mã nhúng Web</span>
           </button>
 
           <button

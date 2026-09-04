@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { QuestionPack, QuestionResult } from '../../types';
 import { soundFx } from '../../utils/sound';
-import { Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Share2, Code, Clock, Flame, Award } from 'lucide-react';
+import { Trophy, CheckCircle2, XCircle, RotateCcw, ArrowRight, Share2, Clock, Flame, Award } from 'lucide-react';
 
 interface Props {
   pack: QuestionPack;
@@ -14,7 +14,6 @@ interface Props {
   totalTimeSeconds: number;
   onRestart: () => void;
   onChoosePack: () => void;
-  onOpenEmbed: () => void;
 }
 
 export const ResultScreen: React.FC<Props> = ({
@@ -26,7 +25,6 @@ export const ResultScreen: React.FC<Props> = ({
   totalTimeSeconds,
   onRestart,
   onChoosePack,
-  onOpenEmbed,
 }) => {
   const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
   const correctCount = results.filter((r) => r.isCorrect).length;
@@ -171,14 +169,6 @@ export const ResultScreen: React.FC<Props> = ({
         >
           <span>Khám phá chủ đề khác</span>
           <ArrowRight className="w-4 h-4" />
-        </button>
-
-        <button
-          type="button"
-          onClick={onOpenEmbed}
-          className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-green-500/20 hover:bg-green-500/30 text-green-300 font-semibold flex items-center justify-center gap-2 border border-green-500/40 transition backdrop-blur-md"
-        >
-          <Code className="w-4 h-4" /> Nhúng vào web
         </button>
       </div>
     </motion.div>

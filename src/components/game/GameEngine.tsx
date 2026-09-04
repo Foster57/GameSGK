@@ -26,7 +26,6 @@ import {
   AlertCircle,
   Lightbulb,
   X,
-  Code,
   Share2,
 } from 'lucide-react';
 
@@ -35,7 +34,6 @@ interface Props {
   settings: GameSettings;
   onUpdateSettings: (newSettings: Partial<GameSettings>) => void;
   onBackToMenu: () => void;
-  onOpenEmbedModal: () => void;
 }
 
 export const GameEngine: React.FC<Props> = ({
@@ -43,7 +41,6 @@ export const GameEngine: React.FC<Props> = ({
   settings,
   onUpdateSettings,
   onBackToMenu,
-  onOpenEmbedModal,
 }) => {
   const [gameState, setGameState] = useState<GameState>({
     currentQuestionIndex: 0,
@@ -293,7 +290,6 @@ export const GameEngine: React.FC<Props> = ({
         totalTimeSeconds={totalTime}
         onRestart={handleRestart}
         onChoosePack={onBackToMenu}
-        onOpenEmbed={onOpenEmbedModal}
       />
     );
   }
@@ -362,17 +358,6 @@ export const GameEngine: React.FC<Props> = ({
               title={settings.soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
             >
               {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-blue-400" /> : <VolumeX className="w-4 h-4 text-white/40" />}
-            </button>
-
-            {/* Quick Embed Button */}
-            <button
-              type="button"
-              onClick={onOpenEmbedModal}
-              className="hidden sm:flex items-center gap-1 text-xs px-3 py-1.5 rounded-2xl border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 transition font-medium"
-              title="Lấy mã nhúng HTML/React"
-            >
-              <Code className="w-3.5 h-3.5 text-blue-400" />
-              <span>Nhúng</span>
             </button>
           </div>
         </div>

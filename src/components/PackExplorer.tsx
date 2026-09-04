@@ -4,7 +4,6 @@ import { QuestionPack } from '../types';
 import {
   Play,
   Edit3,
-  Code,
   Layers,
   Languages,
   Atom,
@@ -20,7 +19,6 @@ interface Props {
   onSelectPack: (pack: QuestionPack) => void;
   onEditPack: (pack: QuestionPack) => void;
   onCreateNewPack: () => void;
-  onOpenEmbed: (pack: QuestionPack) => void;
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -29,7 +27,6 @@ export const PackExplorer: React.FC<Props> = ({
   onSelectPack,
   onEditPack,
   onCreateNewPack,
-  onOpenEmbed,
   onImportJson,
 }) => {
   const getPackIcon = (iconName: string) => {
@@ -74,7 +71,7 @@ export const PackExplorer: React.FC<Props> = ({
             Thư Viện Bài Tập Kéo Thả Đáp Án
           </h1>
           <p className="text-sm text-blue-200/80 leading-relaxed">
-            Hỗ trợ 4 dạng học liệu trực quan: Điền từ vào chỗ trống, Phân loại nhóm, Ghép cặp khái niệm và Sắp xếp quy trình. Dễ dàng xuất mã nhúng cho website của bạn.
+            Hỗ trợ 4 dạng học liệu trực quan: Điền từ vào chỗ trống, Phân loại nhóm, Ghép cặp khái niệm và Sắp xếp quy trình.
           </p>
         </div>
 
@@ -107,7 +104,7 @@ export const PackExplorer: React.FC<Props> = ({
             Các gói học liệu có sẵn ({packs.length})
           </h2>
           <span className="text-xs text-white/50">
-            Chọn một bài học để bắt đầu chơi hoặc lấy mã nhúng
+            Chọn một bài học để bắt đầu chơi
           </span>
         </div>
 
@@ -188,15 +185,6 @@ export const PackExplorer: React.FC<Props> = ({
                     >
                       <Edit3 className="w-3.5 h-3.5 text-purple-400" />
                       <span className="hidden sm:inline">Chỉnh sửa</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onOpenEmbed(pack)}
-                      className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 text-xs font-semibold flex items-center gap-1 transition"
-                      title="Lấy mã nhúng HTML / React"
-                    >
-                      <Code className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="hidden sm:inline">Mã nhúng</span>
                     </button>
                   </div>
 
