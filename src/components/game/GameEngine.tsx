@@ -193,9 +193,24 @@ export const GameEngine: React.FC<Props> = ({
 
     setGameState((prev) => {
       const nextStreak = isCorrect ? prev.streak + 1 : 0;
+      const nextScore = prev.score + pointsEarned;
+
+      // Broadcast answer result to parent window (if inside iframe)
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'EDUDROP_QUESTION_ANSWERED',
+          packId: pack.id,
+          questionIndex: prev.currentQuestionIndex,
+          questionId: currentQuestion.id,
+          isCorrect,
+          pointsEarned,
+          currentScore: nextScore,
+        }, '*');
+      }
+
       return {
         ...prev,
-        score: prev.score + pointsEarned,
+        score: nextScore,
         streak: nextStreak,
         maxStreak: Math.max(prev.maxStreak, nextStreak),
         isAnswerSubmitted: true,
@@ -204,6 +219,37 @@ export const GameEngine: React.FC<Props> = ({
       };
     });
   };
+
+  // Broadcast quiz completion to parent window (if inside iframe)
+  useEffect(() => {
+    if (gameState.isFinished && typeof window !== 'undefined' && window.parent && window.parent !== window) {
+      const totalTime = Math.round((Date.now() - gameState.startedAt) / 1000);
+      window.parent.postMessage({
+        type: 'EDUDROP_QUIZ_COMPLETE',
+        packId: pack.id,
+        packTitle: pack.title,
+        score: gameState.score,
+        maxScore,
+        percentage: Math.round((gameState.score / (maxScore || 1)) * 100),
+        correctCount: gameState.results.filter((r) => r.isCorrect).length,
+        totalQuestions: pack.questions.length,
+        totalTimeSeconds: totalTime,
+        results: gameState.results,
+      }, '*');
+    }
+  }, [gameState.isFinished, gameState.score, maxScore, pack.id, pack.questions.length, pack.title]);
+
+  // Listen to remote commands from parent window
+  useEffect(() => {
+    const handleRemoteMessage = (event: MessageEvent) => {
+      if (!event.data) return;
+      if (event.data.type === 'EDUDROP_RESTART') {
+        handleRestart();
+      }
+    };
+    window.addEventListener('message', handleRemoteMessage);
+    return () => window.removeEventListener('message', handleRemoteMessage);
+  }, []);
 
   const handleNextQuestion = () => {
     if (gameState.currentQuestionIndex + 1 >= pack.questions.length) {

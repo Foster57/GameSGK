@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { QuestionPack, GameSettings } from '../../types';
 import {
   Code,
@@ -10,8 +10,11 @@ import {
   Layers,
   Globe,
   Download,
-  Settings,
+  Terminal,
   ExternalLink,
+  Sparkles,
+  Radio,
+  BookOpen,
 } from 'lucide-react';
 
 interface Props {
@@ -25,34 +28,87 @@ export const EmbedModal: React.FC<Props> = ({
   isOpen,
   onClose,
   currentPack,
-  settings,
 }) => {
-  const [activeTab, setActiveTab] = useState<'iframe' | 'react' | 'json' | 'api'>('iframe');
+  const [activeTab, setActiveTab] = useState<'iframe' | 'api' | 'github' | 'react' | 'json'>('iframe');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [embedTheme, setEmbedTheme] = useState<string>('indigo');
   const [embedHeight, setEmbedHeight] = useState<number>(650);
+
+  // Compute the current detected origin & base path (supports GitHub Pages subpath e.g. /my-repo/)
+  const getDetectedBaseUrl = () => {
+    if (typeof window === 'undefined') return 'https://username.github.io/my-game-repo';
+    const origin = window.location.origin;
+    // Strip trailing index.html and trailing slashes
+    const pathname = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/+$/, '');
+    return `${origin}${pathname}`;
+  };
+
+  const [customBaseUrl, setCustomBaseUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen && !customBaseUrl) {
+      setCustomBaseUrl(getDetectedBaseUrl());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
-  const iframeUrl = `${currentUrl}/?pack=${currentPack.id}&theme=${embedTheme}&embedded=true`;
+  const effectiveBaseUrl = customBaseUrl.trim() || getDetectedBaseUrl();
+  const iframeUrl = `${effectiveBaseUrl.replace(/\/+$/, '')}/?pack=${currentPack.id}&embedded=true`;
 
-  const iframeSnippet = `<!-- EduDrop Drag & Drop Quiz Embed -->
-<div style="position: relative; width: 100%; max-width: 850px; margin: 0 auto;">
+  const iframeSnippet = `<!-- 1. Thẻ iFrame nhúng Game vào Project khác / Website / LMS -->
+<div style="position: relative; width: 100%; max-width: 900px; margin: 0 auto;">
   <iframe
+    id="edudrop-game-frame"
     src="${iframeUrl}"
     width="100%"
     height="${embedHeight}px"
     frameborder="0"
-    style="border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);"
+    style="border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;"
     allow="autoplay"
   ></iframe>
 </div>`;
 
-  const reactSnippet = `// 1. Cài đặt các thư viện cần thiết:
+  const postMessageSnippet = `// 2. Lắng nghe Điểm số & Kết quả học sinh trong Project của bạn:
+window.addEventListener('message', function (event) {
+  // Lọc chỉ nhận sự kiện từ EduDrop Game
+  if (!event.data || !event.data.type) return;
+
+  // Khi học sinh hoàn thành toàn bộ bài tập:
+  if (event.data.type === 'EDUDROP_QUIZ_COMPLETE') {
+    console.log('🎉 Hoàn thành bài quiz:', event.data.packTitle);
+    console.log('Điểm đạt được:', event.data.score + ' / ' + event.data.maxScore);
+    console.log('Tỷ lệ đúng:', event.data.percentage + '%');
+    console.log('Thời gian làm bài:', event.data.totalTimeSeconds + ' giây');
+    console.log('Chi tiết từng câu:', event.data.results);
+
+    // TODO: Gửi điểm về Backend API / Database của project bạn:
+    // fetch('/api/save-score', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(event.data)
+    // });
+  }
+
+  // Khi học sinh trả lời xong 1 câu (real-time tracking):
+  if (event.data.type === 'EDUDROP_QUESTION_ANSWERED') {
+    console.log('Câu hỏi số:', event.data.questionIndex + 1);
+    console.log('Trả lời đúng?:', event.data.isCorrect);
+    console.log('Điểm cộng:', event.data.pointsEarned);
+  }
+});
+
+// 3. (Tùy chọn) Điều khiển game từ xa từ Project chính:
+function restartEduDropGame() {
+  const frame = document.getElementById('edudrop-game-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'EDUDROP_RESTART' }, '*');
+  }
+}`;
+
+  const reactSnippet = `// 1. Cài đặt thư viện:
 // npm install motion lucide-react canvas-confetti
 
-// 2. Nhúng vào Component React / Next.js của bạn:
+// 2. Nhúng trực tiếp vào Component React / Next.js:
 import React from 'react';
 import { GameEngine } from '@/components/game/GameEngine';
 
@@ -99,12 +155,12 @@ export default function LearningQuizPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-3xl bg-[#0a0a1a]/90 backdrop-blur-3xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-white"
+        className="w-full max-w-3xl bg-[#0a0a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-white"
       >
         {/* Modal Header */}
         <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
@@ -114,10 +170,10 @@ export default function LearningQuizPage() {
             </div>
             <div>
               <h3 className="font-bold text-lg text-white">
-                Tích hợp Game vào Website / LMS
+                Tích hợp Game vào Website & Deploy GitHub Pages
               </h3>
               <p className="text-xs text-white/60">
-                Gói câu hỏi: <strong className="text-blue-300">{currentPack.title}</strong>
+                Gói học liệu: <strong className="text-blue-300">{currentPack.title}</strong>
               </p>
             </div>
           </div>
@@ -131,39 +187,61 @@ export default function LearningQuizPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="px-6 pt-3 flex border-b border-white/10 gap-2">
+        <div className="px-6 pt-3 flex border-b border-white/10 gap-1.5 overflow-x-auto text-xs md:text-sm">
           <button
             type="button"
             onClick={() => setActiveTab('iframe')}
-            className={`pb-3 px-3 text-xs md:text-sm font-semibold flex items-center gap-1.5 border-b-2 transition ${
+            className={`pb-3 px-3 font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
               activeTab === 'iframe'
                 ? 'border-blue-400 text-blue-300'
                 : 'border-transparent text-white/60 hover:text-white'
             }`}
           >
-            <Globe className="w-4 h-4" /> Mã nhúng iFrame (HTML)
+            <Globe className="w-4 h-4" /> Mã nhúng iFrame
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('api')}
+            className={`pb-3 px-3 font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
+              activeTab === 'api'
+                ? 'border-blue-400 text-blue-300'
+                : 'border-transparent text-white/60 hover:text-white'
+            }`}
+          >
+            <Radio className="w-4 h-4 text-emerald-400" /> Nhận điểm (postMessage API)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('github')}
+            className={`pb-3 px-3 font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
+              activeTab === 'github'
+                ? 'border-blue-400 text-blue-300'
+                : 'border-transparent text-white/60 hover:text-white'
+            }`}
+          >
+            <Terminal className="w-4 h-4 text-amber-400" /> Cách Deploy GitHub Pages
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('react')}
-            className={`pb-3 px-3 text-xs md:text-sm font-semibold flex items-center gap-1.5 border-b-2 transition ${
+            className={`pb-3 px-3 font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
               activeTab === 'react'
                 ? 'border-blue-400 text-blue-300'
                 : 'border-transparent text-white/60 hover:text-white'
             }`}
           >
-            <Layers className="w-4 h-4" /> React / Next.js Component
+            <Layers className="w-4 h-4" /> React Component
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('json')}
-            className={`pb-3 px-3 text-xs md:text-sm font-semibold flex items-center gap-1.5 border-b-2 transition ${
+            className={`pb-3 px-3 font-semibold flex items-center gap-1.5 border-b-2 transition whitespace-nowrap ${
               activeTab === 'json'
                 ? 'border-blue-400 text-blue-300'
                 : 'border-transparent text-white/60 hover:text-white'
             }`}
           >
-            <FileJson className="w-4 h-4" /> Dữ liệu JSON học liệu
+            <FileJson className="w-4 h-4" /> File JSON
           </button>
         </div>
 
@@ -172,20 +250,43 @@ export default function LearningQuizPage() {
           {activeTab === 'iframe' && (
             <div className="space-y-4">
               <p className="text-xs md:text-sm text-white/80 leading-relaxed">
-                Sao chép đoạn mã dưới đây và dán trực tiếp vào bất kỳ website nào (WordPress, LMS, Notion, Blog, Web App) để hiển thị game:
+                Dán URL deploy GitHub Pages của bạn vào ô dưới đây (hoặc dùng URL mặc định). Mã iFrame bên dưới sẽ tự động cập nhật để bạn copy nhúng vào bất kỳ project nào:
               </p>
 
-              {/* Customizer controls */}
-              <div className="p-3.5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex flex-wrap items-center gap-4 text-xs text-white/80">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-white/80">Chiều cao iFrame:</span>
+              {/* Custom URL & Height inputs */}
+              <div className="p-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 space-y-3 text-xs text-white/80">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="font-semibold text-white/90 whitespace-nowrap">URL Game đã deploy:</span>
                   <input
-                    type="number"
-                    value={embedHeight}
-                    onChange={(e) => setEmbedHeight(Number(e.target.value))}
-                    className="w-20 px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-xs text-white text-center focus:outline-none focus:border-blue-400"
+                    type="text"
+                    value={customBaseUrl}
+                    onChange={(e) => setCustomBaseUrl(e.target.value)}
+                    placeholder="https://<username>.github.io/<tên-repo>"
+                    className="flex-1 px-3 py-1.5 bg-white/10 border border-white/20 rounded-xl text-xs text-blue-200 placeholder-white/40 focus:outline-none focus:border-blue-400 font-mono"
                   />
-                  <span>px</span>
+                  <button
+                    type="button"
+                    onClick={() => setCustomBaseUrl(getDetectedBaseUrl())}
+                    className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-medium text-white/70 transition shrink-0"
+                  >
+                    Reset URL
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 pt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-white/80">Chiều cao iFrame:</span>
+                    <input
+                      type="number"
+                      value={embedHeight}
+                      onChange={(e) => setEmbedHeight(Number(e.target.value))}
+                      className="w-20 px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-xs text-white text-center focus:outline-none focus:border-blue-400"
+                    />
+                    <span>px</span>
+                  </div>
+                  <span className="text-[11px] text-white/50">
+                    💡 Tham số <code>&embedded=true</code> sẽ ẩn thanh điều hướng ngoài, chỉ hiển thị game toàn màn hình.
+                  </span>
                 </div>
               </div>
 
@@ -200,6 +301,88 @@ export default function LearningQuizPage() {
                   <span>{copiedKey === 'iframe' ? 'Đã sao chép!' : 'Copy Code'}</span>
                 </button>
                 <pre className="pt-6">{iframeSnippet}</pre>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'api' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 leading-relaxed">
+                <strong className="text-emerald-300 block mb-1 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4" /> Tự động giao tiếp giữa Game và Project chính (Cross-Origin postMessage):
+                </strong>
+                Khi học sinh trả lời hoặc hoàn thành bài quiz trong iFrame, game sẽ gửi tin nhắn <code>postMessage</code> đến cửa sổ cha. Project chính của bạn có thể hứng sự kiện này để lưu điểm vào cơ sở dữ liệu của bạn ngay lập tức!
+              </div>
+
+              <div className="relative rounded-2xl bg-black/50 border border-white/10 p-4 font-mono text-xs text-emerald-200 overflow-x-auto shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => handleCopy(postMessageSnippet, 'api')}
+                  className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center gap-1.5 transition text-xs font-sans font-medium border border-white/10 backdrop-blur-md"
+                >
+                  {copiedKey === 'api' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedKey === 'api' ? 'Đã sao chép!' : 'Copy JS Code'}</span>
+                </button>
+                <pre className="pt-6 leading-relaxed max-h-[340px] overflow-y-auto">{postMessageSnippet}</pre>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'github' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 leading-relaxed">
+                Dự án đã được cấu hình đường dẫn tương đối <code>base: &apos;./&apos;</code> trong <code>vite.config.ts</code> và đã có sẵn file tự động deploy GitHub Actions <code>.github/workflows/deploy.yml</code>. Bạn chỉ cần thực hiện 3 bước sau:
+              </div>
+
+              <div className="space-y-3 text-xs text-white/80">
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 flex items-center justify-center text-xs">1</span>
+                    Đẩy code lên GitHub Repository của bạn
+                  </div>
+                  <p className="text-white/60 pl-7">
+                    Khởi tạo git và push code lên kho GitHub của bạn (ví dụ branch <code>main</code>):
+                  </p>
+                  <pre className="ml-7 p-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-[11px] text-blue-200 overflow-x-auto">
+{`git init
+git add .
+git commit -m "Deploy EduDrop game"
+git branch -M main
+git remote add origin https://github.com/<tên-bạn>/<tên-repo>.git
+git push -u origin main`}
+                  </pre>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 flex items-center justify-center text-xs">2</span>
+                    Bật GitHub Pages trong Settings của Repo
+                  </div>
+                  <p className="text-white/60 pl-7 leading-relaxed">
+                    Vào GitHub của bạn &rarr; <strong>Settings</strong> &rarr; mục <strong>Pages</strong> (ở cột bên trái).<br />
+                    Tại phần <strong>Build and deployment</strong>:
+                  </p>
+                  <div className="ml-7 p-3 rounded-xl bg-black/40 border border-white/10 space-y-1">
+                    <p className="text-emerald-300 font-semibold">
+                      Cách khuyên dùng (Tự động 100%):
+                    </p>
+                    <p className="text-white/70">
+                      Chọn <strong>Source: GitHub Actions</strong>. GitHub sẽ tự động đọc file <code>.github/workflows/deploy.yml</code> có sẵn và deploy hoàn tất trong vòng 1 phút!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/30 text-blue-300 flex items-center justify-center text-xs">3</span>
+                    Lấy link và sử dụng trong project khác
+                  </div>
+                  <p className="text-white/60 pl-7 leading-relaxed">
+                    Link GitHub Pages của bạn sẽ có dạng:<br />
+                    <code className="text-amber-300 font-mono">https://&lt;username&gt;.github.io/&lt;tên-repo&gt;/</code><br />
+                    Copy link đó và dán vào tab <strong>&quot;Mã nhúng iFrame&quot;</strong> để nhúng vào bất kỳ trang web nào!
+                  </p>
+                </div>
               </div>
             </div>
           )}

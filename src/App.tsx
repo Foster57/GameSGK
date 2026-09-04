@@ -46,12 +46,37 @@ export default function App() {
   // Check URL parameters on mount (e.g. ?embedded=true&pack=...)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
+      // Support both window.location.search and hash query parameters
+      const searchStr = window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+      const params = new URLSearchParams(searchStr);
       const embeddedParam = params.get('embedded');
       const packIdParam = params.get('pack');
+      const customDataParam = params.get('customData');
 
-      if (packIdParam) {
-        const matched = packs.find((p) => p.id === packIdParam);
+      if (customDataParam) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(atob(customDataParam)));
+          if (parsed && parsed.questions) {
+            setPacks((prev) => [parsed, ...prev]);
+            setActivePack(parsed);
+            setActiveView('game');
+          }
+        } catch {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(customDataParam));
+            if (parsed && parsed.questions) {
+              setPacks((prev) => [parsed, ...prev]);
+              setActivePack(parsed);
+              setActiveView('game');
+            }
+          } catch (err) {
+            console.error('Failed to parse custom pack from URL', err);
+          }
+        }
+      } else if (packIdParam) {
+        const matched = packs.find(
+          (p) => p.id.toLowerCase() === packIdParam.toLowerCase() || p.title.toLowerCase() === packIdParam.toLowerCase()
+        );
         if (matched) {
           setActivePack(matched);
           setActiveView('game');
@@ -62,6 +87,19 @@ export default function App() {
         setIsEmbeddedMode(true);
         setActiveView('game');
       }
+
+      // Listen to parent project messages to dynamically load a pack
+      const handleMessage = (event: MessageEvent) => {
+        if (!event.data) return;
+        if (event.data.type === 'EDUDROP_LOAD_PACK' && event.data.pack) {
+          setPacks((prev) => [event.data.pack, ...prev.filter((p) => p.id !== event.data.pack.id)]);
+          setActivePack(event.data.pack);
+          setActiveView('game');
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
     }
   }, []);
 
