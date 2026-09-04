@@ -4,7 +4,6 @@ import { QuestionPack, GameSettings } from './types';
 import { Navbar } from './components/Navbar';
 import { PackExplorer } from './components/PackExplorer';
 import { GameEngine } from './components/game/GameEngine';
-import { EmbedModal } from './components/embed/EmbedModal';
 import { PackEditorModal } from './components/editor/PackEditorModal';
 
 const LOCAL_STORAGE_KEY = 'edudrop_custom_packs';
@@ -39,7 +38,6 @@ export default function App() {
     themeColor: 'indigo',
   });
 
-  const [isEmbedModalOpen, setIsEmbedModalOpen] = useState<boolean>(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState<boolean>(false);
   const [editingPack, setEditingPack] = useState<QuestionPack | null>(null);
 
@@ -185,7 +183,6 @@ export default function App() {
           <Navbar
             activeView={activeView}
             onNavigate={(view) => setActiveView(view)}
-            onOpenEmbed={() => setIsEmbedModalOpen(true)}
             onCreateNew={handleCreateNewPack}
             settings={settings}
             onToggleSound={() => setSettings((s) => ({ ...s, soundEnabled: !s.soundEnabled }))}
@@ -201,10 +198,6 @@ export default function App() {
             onSelectPack={handleSelectPack}
             onEditPack={handleEditPack}
             onCreateNewPack={handleCreateNewPack}
-            onOpenEmbed={(pack) => {
-              setActivePack(pack);
-              setIsEmbedModalOpen(true);
-            }}
             onImportJson={handleImportJson}
           />
         )}
@@ -215,18 +208,9 @@ export default function App() {
             settings={settings}
             onUpdateSettings={(newS) => setSettings((prev) => ({ ...prev, ...newS }))}
             onBackToMenu={() => setActiveView('explorer')}
-            onOpenEmbedModal={() => setIsEmbedModalOpen(true)}
           />
         )}
       </main>
-
-      {/* Embed & Export Modal */}
-      <EmbedModal
-        isOpen={isEmbedModalOpen}
-        onClose={() => setIsEmbedModalOpen(false)}
-        currentPack={activePack}
-        settings={settings}
-      />
 
       {/* Pack Creator / Editor Modal */}
       <PackEditorModal
