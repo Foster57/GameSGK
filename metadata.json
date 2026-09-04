@@ -1,0 +1,6 @@
+{
+  "name": "EduDrop - Interactive Drag & Drop Learning Game",
+  "description": "An interactive, embeddable drag-and-drop learning game widget with multiple question types (fill-in-the-blank, category sorting, matching pairs, sequence ordering), custom editor, sound effects, and export options.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
