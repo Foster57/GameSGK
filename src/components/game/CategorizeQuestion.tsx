@@ -156,7 +156,8 @@ export const CategorizeQuestion: React.FC<Props> = ({
                         draggable={!isSubmitted}
                         onDragStart={(e) => {
                           setDraggedItemId(item.id);
-                          e.dataTransfer.setData('text/plain', item.id);
+                          const de = e as unknown as React.DragEvent;
+                          if (de.dataTransfer) de.dataTransfer.setData('text/plain', item.id);
                           soundFx.playPickup();
                         }}
                         onDragEnd={() => setDraggedItemId(null)}
@@ -248,7 +249,8 @@ export const CategorizeQuestion: React.FC<Props> = ({
                     onDragStart={(e) => {
                       setSelectedItemId(item.id);
                       setDraggedItemId(item.id);
-                      e.dataTransfer.setData('text/plain', item.id);
+                      const de = e as unknown as React.DragEvent;
+                      if (de.dataTransfer) de.dataTransfer.setData('text/plain', item.id);
                       soundFx.playPickup();
                     }}
                     onDragEnd={() => setDraggedItemId(null)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SAMPLE_PACKS } from './data/samplePacks';
 import { QuestionPack, GameSettings } from './types';
 import { Navbar } from './components/Navbar';
@@ -25,6 +25,8 @@ export default function App() {
   });
 
   const [activePack, setActivePack] = useState<QuestionPack>(SAMPLE_PACKS[0]);
+  const packsRef = useRef(packs);
+  packsRef.current = packs;
   const [activeView, setActiveView] = useState<'explorer' | 'game' | 'editor'>('explorer');
   const [isEmbeddedMode, setIsEmbeddedMode] = useState<boolean>(false);
 
@@ -72,7 +74,7 @@ export default function App() {
           }
         }
       } else if (packIdParam) {
-        const matched = packs.find(
+        const matched = packsRef.current.find(
           (p) => p.id.toLowerCase() === packIdParam.toLowerCase() || p.title.toLowerCase() === packIdParam.toLowerCase()
         );
         if (matched) {

@@ -14,19 +14,15 @@ import { OrderingQuestion } from './OrderingQuestion';
 import { ResultScreen } from './ResultScreen';
 import { soundFx } from '../../utils/sound';
 import {
-  HelpCircle,
   Flame,
   Clock,
   Volume2,
   VolumeX,
-  Sparkles,
   ArrowRight,
-  RotateCcw,
   CheckCircle2,
   AlertCircle,
   Lightbulb,
   X,
-  Share2,
 } from 'lucide-react';
 
 interface Props {
@@ -60,9 +56,16 @@ export const GameEngine: React.FC<Props> = ({
   const [timerSeconds, setTimerSeconds] = useState<number>(settings.timePerQuestion || 0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const handleSubmitRef = useRef<() => void>(() => {});
+  const handleRestartRef = useRef<() => void>(() => {});
 
   const currentQuestion: Question | undefined = pack.questions[gameState.currentQuestionIndex];
   const maxScore = pack.questions.reduce((acc, q) => acc + (q.points || 10), 0);
+
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmitAnswer;
+    handleRestartRef.current = handleRestart;
+  });
 
   // Sync sound settings
   useEffect(() => {
@@ -82,7 +85,7 @@ export const GameEngine: React.FC<Props> = ({
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             // Auto submit on time-out
-            handleSubmitAnswer();
+            setTimeout(() => handleSubmitRef.current(), 0);
             return 0;
           }
           return prev - 1;
@@ -241,7 +244,7 @@ export const GameEngine: React.FC<Props> = ({
     const handleRemoteMessage = (event: MessageEvent) => {
       if (!event.data) return;
       if (event.data.type === 'EDUDROP_RESTART') {
-        handleRestart();
+        handleRestartRef.current();
       }
     };
     window.addEventListener('message', handleRemoteMessage);
@@ -493,7 +496,7 @@ export const GameEngine: React.FC<Props> = ({
               gameState.isCurrentAnswerCorrect ? (
                 <div className="flex items-center gap-2 text-green-300 font-bold text-sm">
                   <CheckCircle2 className="w-5 h-5 text-green-400" />
-                  <span>Chính xác tuyệt vời! (+{currentQuestion.points || 10} điểm)</span>
+                  <span>Chính xác tuyệt vời! (+{gameState.results[gameState.results.length - 1]?.userScore || 0} điểm)</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">

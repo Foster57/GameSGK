@@ -10,6 +10,15 @@ interface Props {
   onAnswerChange: (orderedItems: OrderItem[], isComplete: boolean) => void;
 }
 
+const shuffleArray = <T,>(arr: T[]): T[] => {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export const OrderingQuestion: React.FC<Props> = ({
   question,
   isSubmitted,
@@ -20,7 +29,7 @@ export const OrderingQuestion: React.FC<Props> = ({
 
   // Shuffle items initially
   useEffect(() => {
-    const shuffled = [...question.items].sort(() => 0.5 - Math.random());
+    const shuffled = shuffleArray(question.items);
     setItems(shuffled);
     onAnswerChange(shuffled, true);
   }, [question.id]);
@@ -37,7 +46,7 @@ export const OrderingQuestion: React.FC<Props> = ({
 
   const handleReset = () => {
     if (isSubmitted) return;
-    const shuffled = [...question.items].sort(() => 0.5 - Math.random());
+    const shuffled = shuffleArray(question.items);
     setItems(shuffled);
     onAnswerChange(shuffled, true);
   };
@@ -74,7 +83,8 @@ export const OrderingQuestion: React.FC<Props> = ({
               draggable={!isSubmitted}
               onDragStart={(e) => {
                 setDraggedIndex(index);
-                e.dataTransfer.setData('text/plain', index.toString());
+                const de = e as unknown as React.DragEvent;
+                if (de.dataTransfer) de.dataTransfer.setData('text/plain', index.toString());
                 soundFx.playPickup();
               }}
               onDragOver={(e) => {

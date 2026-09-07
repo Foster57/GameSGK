@@ -68,11 +68,12 @@ export const FillBlankQuestion: React.FC<Props> = ({
     if (selectedToken === token) {
       setSelectedToken(null);
     } else {
-      setSelectedToken(token);
-      // Auto-fill into the first empty slot if only one empty slot exists
-      const emptySlot = question.slots.find((s) => !slotAnswers[s.id]);
-      if (emptySlot) {
-        handlePlaceInSlot(emptySlot.id, token);
+      // Auto-fill only when exactly one empty slot remains
+      const emptySlots = question.slots.filter((s) => !slotAnswers[s.id]);
+      if (emptySlots.length === 1) {
+        handlePlaceInSlot(emptySlots[0].id, token);
+      } else {
+        setSelectedToken(token);
       }
     }
   };
@@ -215,7 +216,8 @@ export const FillBlankQuestion: React.FC<Props> = ({
                     draggable
                     onDragStart={(e) => {
                       setDraggedToken(opt);
-                      e.dataTransfer.setData('text/plain', opt);
+                      const de = e as unknown as React.DragEvent;
+                      if (de.dataTransfer) de.dataTransfer.setData('text/plain', opt);
                       soundFx.playPickup();
                     }}
                     onDragEnd={() => setDraggedToken(null)}

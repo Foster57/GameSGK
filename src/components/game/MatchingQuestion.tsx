@@ -10,6 +10,15 @@ interface Props {
   onAnswerChange: (answers: Record<string, string>, isComplete: boolean) => void;
 }
 
+const shuffleArray = <T,>(arr: T[]): T[] => {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export const MatchingQuestion: React.FC<Props> = ({
   question,
   isSubmitted,
@@ -28,7 +37,7 @@ export const MatchingQuestion: React.FC<Props> = ({
       list.push(...question.distractors);
     }
     // Shuffle options initially
-    return list.sort(() => 0.5 - Math.random());
+    return shuffleArray(list);
   }, [question.id]);
 
   useEffect(() => {
@@ -214,7 +223,8 @@ export const MatchingQuestion: React.FC<Props> = ({
                     onDragStart={(e) => {
                       setSelectedAnswer(opt);
                       setDraggedAnswer(opt);
-                      e.dataTransfer.setData('text/plain', opt);
+                      const de = e as unknown as React.DragEvent;
+                      if (de.dataTransfer) de.dataTransfer.setData('text/plain', opt);
                       soundFx.playPickup();
                     }}
                     onDragEnd={() => setDraggedAnswer(null)}
