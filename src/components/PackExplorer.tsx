@@ -4,6 +4,7 @@ import { QuestionPack } from '../types';
 import {
   Play,
   Edit3,
+  Trash2,
   Layers,
   Languages,
   Atom,
@@ -18,6 +19,7 @@ interface Props {
   packs: QuestionPack[];
   onSelectPack: (pack: QuestionPack) => void;
   onEditPack: (pack: QuestionPack) => void;
+  onDeletePack: (pack: QuestionPack) => void;
   onCreateNewPack: () => void;
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -26,6 +28,7 @@ export const PackExplorer: React.FC<Props> = ({
   packs,
   onSelectPack,
   onEditPack,
+  onDeletePack,
   onCreateNewPack,
   onImportJson,
 }) => {
@@ -151,10 +154,10 @@ export const PackExplorer: React.FC<Props> = ({
                         type === 'fill_blank'
                           ? 'Điền từ'
                           : type === 'categorize'
-                          ? 'Phân loại nhóm'
-                          : type === 'matching'
-                          ? 'Ghép cặp'
-                          : 'Sắp xếp thứ tự';
+                            ? 'Phân loại nhóm'
+                            : type === 'matching'
+                              ? 'Ghép cặp'
+                              : 'Sắp xếp thứ tự';
 
                       return (
                         <span
@@ -179,6 +182,15 @@ export const PackExplorer: React.FC<Props> = ({
                     >
                       <Edit3 className="w-3.5 h-3.5 text-purple-400" />
                       <span className="hidden sm:inline">Chỉnh sửa</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeletePack(pack)}
+                      className="p-2 rounded-xl text-white/60 hover:text-rose-400 hover:bg-rose-500/10 text-xs font-semibold flex items-center gap-1 transition"
+                      title="Xoá bộ câu hỏi"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Xoá</span>
                     </button>
                   </div>
 

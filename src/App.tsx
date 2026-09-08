@@ -118,6 +118,32 @@ export default function App() {
     setIsEditorModalOpen(true);
   };
 
+  const handleDeletePack = (pack: QuestionPack) => {
+    if (!confirm(`Bạn có chắc muốn xoá bộ câu hỏi "${pack.title}" không?`)) return;
+
+    setPacks((prev) => {
+      const updatedList = prev.filter((p) => p.id !== pack.id);
+
+      // Sync localStorage
+      try {
+        const customOnly = updatedList.filter(
+          (p) => !SAMPLE_PACKS.some((sp) => sp.id === p.id)
+        );
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(customOnly));
+      } catch {
+        // ignore
+      }
+
+      return updatedList;
+    });
+
+    // If the deleted pack was active, reset to first available
+    if (activePack.id === pack.id) {
+      setActivePack(SAMPLE_PACKS[0]);
+      setActiveView('explorer');
+    }
+  };
+
   const handleSavePack = (newPack: QuestionPack) => {
     setPacks((prev) => {
       const index = prev.findIndex((p) => p.id === newPack.id);
@@ -199,6 +225,7 @@ export default function App() {
             packs={packs}
             onSelectPack={handleSelectPack}
             onEditPack={handleEditPack}
+            onDeletePack={handleDeletePack}
             onCreateNewPack={handleCreateNewPack}
             onImportJson={handleImportJson}
           />
