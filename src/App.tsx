@@ -7,16 +7,25 @@ import { GameEngine } from './components/game/GameEngine';
 import { PackEditorModal } from './components/editor/PackEditorModal';
 
 const LOCAL_STORAGE_KEY = 'edudrop_custom_packs';
+const DELETED_PACKS_KEY = 'edudrop_deleted_packs';
 
 export default function App() {
   const [packs, setPacks] = useState<QuestionPack[]>(() => {
     if (typeof window !== 'undefined') {
       try {
+        // Load deleted pack IDs
+        const deletedRaw = localStorage.getItem(DELETED_PACKS_KEY);
+        const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+
+        // Filter out deleted sample packs
+        const visibleSamples = SAMPLE_PACKS.filter((p) => !deletedIds.includes(p.id));
+
         const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (saved) {
-          const customPacks = JSON.parse(saved);
-          return [...SAMPLE_PACKS, ...customPacks];
+          const customPacks: QuestionPack[] = JSON.parse(saved);
+          return [...visibleSamples, ...customPacks];
         }
+        return visibleSamples;
       } catch {
         // ignore
       }
@@ -121,15 +130,27 @@ export default function App() {
   const handleDeletePack = (pack: QuestionPack) => {
     if (!confirm(`Bạn có chắc muốn xoá bộ câu hỏi "${pack.title}" không?`)) return;
 
+    const isSamplePack = SAMPLE_PACKS.some((sp) => sp.id === pack.id);
+
     setPacks((prev) => {
       const updatedList = prev.filter((p) => p.id !== pack.id);
 
-      // Sync localStorage
       try {
+        // Sync custom packs
         const customOnly = updatedList.filter(
           (p) => !SAMPLE_PACKS.some((sp) => sp.id === p.id)
         );
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(customOnly));
+
+        // Track deleted sample packs
+        if (isSamplePack) {
+          const deletedRaw = localStorage.getItem(DELETED_PACKS_KEY);
+          const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+          if (!deletedIds.includes(pack.id)) {
+            deletedIds.push(pack.id);
+            localStorage.setItem(DELETED_PACKS_KEY, JSON.stringify(deletedIds));
+          }
+        }
       } catch {
         // ignore
       }
