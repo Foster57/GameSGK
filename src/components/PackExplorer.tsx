@@ -22,6 +22,7 @@ interface Props {
   onDeletePack: (pack: QuestionPack) => void;
   onCreateNewPack: () => void;
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpenAIGenerator: () => void;
 }
 
 export const PackExplorer: React.FC<Props> = ({
@@ -31,6 +32,7 @@ export const PackExplorer: React.FC<Props> = ({
   onDeletePack,
   onCreateNewPack,
   onImportJson,
+  onOpenAIGenerator,
 }) => {
   const getPackIcon = (iconName: string) => {
     switch (iconName) {
@@ -73,16 +75,27 @@ export const PackExplorer: React.FC<Props> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 z-10 w-full md:w-auto">
+          {/* Nút soạn tay */}
           <button
             type="button"
             onClick={onCreateNewPack}
-            className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:brightness-110 active:scale-[0.98] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 transition border border-white/20"
+            className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm flex items-center justify-center gap-2 transition border border-white/15 backdrop-blur-md active:scale-[0.98]"
           >
-            <Plus className="w-4 h-4" /> Soạn câu hỏi mới
+            <Plus className="w-4 h-4" /> Soạn mới
           </button>
 
-          <label className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition border border-white/15 backdrop-blur-md">
-            <FileUp className="w-4 h-4 text-purple-300" /> Nhập file JSON
+          {/* Nút tạo bằng AI - nổi bật nhất */}
+          <button
+            type="button"
+            onClick={onOpenAIGenerator}
+            className="flex-1 md:flex-initial px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:brightness-110 active:scale-[0.98] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 transition border border-white/20"
+          >
+            <Sparkles className="w-4 h-4" /> Tạo bằng AI
+          </button>
+
+          {/* Nút nhập JSON */}
+          <label className="flex-1 md:flex-initial px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition border border-white/10 backdrop-blur-md">
+            <FileUp className="w-4 h-4 text-white/50" /> Nhập JSON
             <input
               type="file"
               accept=".json"
@@ -92,6 +105,7 @@ export const PackExplorer: React.FC<Props> = ({
           </label>
         </div>
       </div>
+
 
       {/* Question Packs Grid */}
       <div className="space-y-4">

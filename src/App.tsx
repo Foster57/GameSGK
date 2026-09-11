@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar';
 import { PackExplorer } from './components/PackExplorer';
 import { GameEngine } from './components/game/GameEngine';
 import { PackEditorModal } from './components/editor/PackEditorModal';
+import { AIGeneratorModal } from './components/AIGeneratorModal';
 
 const LOCAL_STORAGE_KEY = 'edudrop_custom_packs';
 const DELETED_PACKS_KEY = 'edudrop_deleted_packs';
@@ -51,6 +52,7 @@ export default function App() {
 
   const [isEditorModalOpen, setIsEditorModalOpen] = useState<boolean>(false);
   const [editingPack, setEditingPack] = useState<QuestionPack | null>(null);
+  const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState<boolean>(false);
 
   // Check URL parameters on mount (e.g. ?embedded=true&pack=...)
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function App() {
         try {
           const parsed = JSON.parse(decodeURIComponent(atob(customDataParam)));
           if (parsed && parsed.questions) {
-            setPacks((prev) => [parsed, ...prev]);
+            setPacks((prev: QuestionPack[]) => [parsed, ...prev]);
             setActivePack(parsed);
             setActiveView('game');
           }
@@ -74,7 +76,7 @@ export default function App() {
           try {
             const parsed = JSON.parse(decodeURIComponent(customDataParam));
             if (parsed && parsed.questions) {
-              setPacks((prev) => [parsed, ...prev]);
+              setPacks((prev: QuestionPack[]) => [parsed, ...prev]);
               setActivePack(parsed);
               setActiveView('game');
             }
@@ -127,6 +129,41 @@ export default function App() {
     setIsEditorModalOpen(true);
   };
 
+  // ── Phải khai báo TRƯỚC handlePackGenerated vì handlePackGenerated gọi nó ──
+  const handleSavePack = (newPack: QuestionPack) => {
+    setPacks((prev) => {
+      const index = prev.findIndex((p) => p.id === newPack.id);
+      let updatedList: QuestionPack[];
+      if (index >= 0) {
+        updatedList = [...prev];
+        updatedList[index] = newPack;
+      } else {
+        updatedList = [newPack, ...prev];
+      }
+
+      // Save custom non-sample packs to localStorage
+      try {
+        const customOnly = updatedList.filter(
+          (p) => !SAMPLE_PACKS.some((sp) => sp.id === p.id)
+        );
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(customOnly));
+      } catch {
+        // ignore
+      }
+
+      return updatedList;
+    });
+
+    setActivePack(newPack);
+    setActiveView('game');
+  };
+
+  // ── Pack được AI tạo ra: lưu vào list rồi vào game ngay ──
+  // handleSavePack đã lo setActivePack + setActiveView, không cần gọi lại
+  const handlePackGenerated = (pack: QuestionPack) => {
+    handleSavePack(pack);
+  };
+
   const handleDeletePack = (pack: QuestionPack) => {
     if (!confirm(`Bạn có chắc muốn xoá bộ câu hỏi "${pack.title}" không?`)) return;
 
@@ -165,34 +202,6 @@ export default function App() {
     }
   };
 
-  const handleSavePack = (newPack: QuestionPack) => {
-    setPacks((prev) => {
-      const index = prev.findIndex((p) => p.id === newPack.id);
-      let updatedList: QuestionPack[];
-      if (index >= 0) {
-        updatedList = [...prev];
-        updatedList[index] = newPack;
-      } else {
-        updatedList = [newPack, ...prev];
-      }
-
-      // Save custom non-sample packs to localStorage
-      try {
-        const customOnly = updatedList.filter(
-          (p) => !SAMPLE_PACKS.some((sp) => sp.id === p.id)
-        );
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(customOnly));
-      } catch {
-        // ignore
-      }
-
-      return updatedList;
-    });
-
-    setActivePack(newPack);
-    setActiveView('game');
-  };
-
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -207,11 +216,13 @@ export default function App() {
         } else {
           alert('File JSON không đúng định dạng QuestionPack của EduDrop.');
         }
-      } catch (err) {
+      } catch {
         alert('Không thể đọc file JSON.');
       }
     };
     reader.readAsText(file);
+    // Fix Bug 3: Reset input để có thể chọn lại cùng file
+    e.target.value = '';
   };
 
   return (
@@ -249,6 +260,7 @@ export default function App() {
             onDeletePack={handleDeletePack}
             onCreateNewPack={handleCreateNewPack}
             onImportJson={handleImportJson}
+            onOpenAIGenerator={() => setIsAIGeneratorOpen(true)}
           />
         )}
 
@@ -268,6 +280,13 @@ export default function App() {
         onClose={() => setIsEditorModalOpen(false)}
         onSavePack={handleSavePack}
         initialPack={editingPack}
+      />
+
+      {/* AI Generator Modal */}
+      <AIGeneratorModal
+        isOpen={isAIGeneratorOpen}
+        onClose={() => setIsAIGeneratorOpen(false)}
+        onPackGenerated={handlePackGenerated}
       />
     </div>
   );
