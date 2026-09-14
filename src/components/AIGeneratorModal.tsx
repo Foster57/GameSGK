@@ -121,7 +121,7 @@ export const AIGeneratorModal: React.FC<Props> = ({ isOpen, onClose, onPackGener
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white">Tạo Câu Hỏi bằng AI</h2>
-                  <p className="text-xs text-white/50">Powered by DeepSeek + MCP</p>
+                  <p className="text-xs text-white/50">Powered by Gemini + MCP</p>
                 </div>
               </div>
               <button

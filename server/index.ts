@@ -93,7 +93,7 @@ app.post("/api/ai/generate-pack/stream", async (req: Request, res: Response) => 
 // Health check
 // ──────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", model: process.env.DEEPSEEK_MODEL ?? "deepseek-chat" });
+  res.json({ status: "ok", model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash" });
 });
 
 // ──────────────────────────────────────────────────────────
@@ -102,6 +102,6 @@ app.get("/api/health", (_req, res) => {
 const PORT = Number(process.env.PORT ?? 3001);
 app.listen(PORT, () => {
   console.log(`✅ AI Server đang chạy tại http://localhost:${PORT}`);
-  console.log(`   DeepSeek Model : ${process.env.DEEPSEEK_MODEL ?? "deepseek-chat"}`);
-  console.log(`   API Key        : ${process.env.DEEPSEEK_API_KEY ? "✓ đã cấu hình" : "⚠ chưa cấu hình!"}`);
+  console.log(`   Gemini Model     : ${process.env.GEMINI_MODEL ?? "gemini-3.0-flash"}`);
+  console.log(`   API Key          : ${process.env.GEMINI_API_KEY ? "✓ đã cấu hình" : "⚠ chưa cấu hình!"}`);
 });

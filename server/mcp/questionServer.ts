@@ -1,7 +1,7 @@
 /**
  * MCP Server: Question Pack Tools
  *
- * Cung cấp 2 tools cho DeepSeek Agent:
+ * Cung cấp 2 tools cho Gemini Agent:
  *   1. get_pack_schema_and_examples  – Trả về schema + ví dụ mẫu đầy đủ 4 dạng câu hỏi
  *   2. validate_question_pack        – Kiểm tra QuestionPack hợp lệ theo types.ts
  */

@@ -1,25 +1,25 @@
 /**
- * Agent Runner – Vòng lặp Agent kết nối MCP Server với DeepSeek
+ * Agent Runner – Vòng lặp Agent kết nối MCP Server với Gemini
  *
  * Luồng hoạt động:
  *  1. Khởi tạo MCP Server (in-memory transport)
- *  2. Lấy danh sách Tools từ MCP Server → convert sang OpenAI format
- *  3. Gửi Prompt + Tools cho DeepSeek
- *  4. Nếu DeepSeek yêu cầu gọi Tool → gọi qua MCP Client → trả kết quả lại cho DeepSeek
- *  5. Lặp cho đến khi DeepSeek trả JSON cuối cùng (không còn tool_calls)
+ *  2. Lấy danh sách Tools từ MCP Server → convert sang FunctionDeclaration
+ *  3. Gửi Prompt + Tools cho Gemini
+ *  4. Nếu Gemini yêu cầu gọi Tool → gọi qua MCP Client → trả kết quả lại cho Gemini
+ *  5. Lặp cho đến khi Gemini trả JSON cuối cùng (không còn functionCall)
  */
 
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { Content } from "@google/genai";
 
-import { deepseek, DEEPSEEK_MODEL } from "./deepseekClient.js";
+import { googleAI, GEMINI_MODEL } from "./geminiClient.js";
 import { createQuestionMcpServer } from "../mcp/questionServer.js";
 
 // Số vòng lặp tối đa để tránh vòng lặp vô tận
 const MAX_TURNS = 8;
 
-// System prompt – hướng dẫn DeepSeek cách dùng Tools
+// System prompt – hướng dẫn Gemini cách dùng Tools
 const SYSTEM_PROMPT = `Bạn là chuyên gia thiết kế bộ câu hỏi giáo dục tương tác cho trò chơi học tập tiếng Việt.
 
 ## Nhiệm vụ
@@ -40,6 +40,40 @@ fill_blank, categorize, matching, ordering.
 - categorize: targetCategoryId PHẢI khớp đúng một category.id.
 - Thêm hint và explanation cho mỗi câu hỏi để hỗ trợ học tập.
 - Trả về JSON THUẦN – KHÔNG bọc trong \`\`\`json hay bất kỳ text nào khác.`;
+
+/**
+ * Convert JSON Schema (MCP) sang Gemini Schema (OpenAPI 3.0, type chữ HOA).
+ */
+function toGeminiSchema(schema: any): any {
+  if (!schema || typeof schema !== "object") return schema;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (value === undefined) continue;
+    if (key === "type" && typeof value === "string") {
+      result.type = value.toUpperCase();
+    } else if (key === "properties" && typeof value === "object" && value !== null) {
+      result.properties = Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, toGeminiSchema(v)])
+      );
+    } else if (key === "items") {
+      result.items = toGeminiSchema(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/** Rút text từ kết quả tool MCP. */
+function extractToolText(result: any): string {
+  if (Array.isArray(result?.content) && result.content.length > 0) {
+    const first = result.content[0];
+    if (typeof first?.text === "string") return first.text;
+    return JSON.stringify(result.content);
+  }
+  return JSON.stringify(result);
+}
 
 export interface GeneratePackOptions {
   prompt: string;       // Yêu cầu người dùng, ví dụ: "Tạo 5 câu về Lịch sử Việt Nam"
@@ -65,88 +99,90 @@ export async function generateQuestionPack(
 
   onProgress?.("🔗 Đã kết nối MCP Server");
 
-  // 2. Lấy danh sách Tools từ MCP Server và convert sang OpenAI format
+  // 2. Lấy danh sách Tools từ MCP Server và convert sang FunctionDeclaration
   const { tools: mcpTools } = await mcpClient.listTools();
-  const openaiTools = mcpTools.map((t) => ({
-    type: "function" as const,
-    function: {
-      name: t.name,
-      description: t.description ?? "",
-      parameters: t.inputSchema as Record<string, unknown>,
-    },
+  const functionDeclarations = mcpTools.map((t) => ({
+    name: t.name,
+    description: t.description ?? "",
+    parameters: toGeminiSchema(t.inputSchema as Record<string, unknown>),
   }));
 
   onProgress?.(`🛠 Đã tải ${mcpTools.length} tools: ${mcpTools.map(t => t.name).join(", ")}`);
 
   // 3. Khởi tạo message history
-  const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: prompt },
+  const contents: Content[] = [
+    { role: "user", parts: [{ text: prompt }] },
   ];
 
   // 4. Agent Loop
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    onProgress?.(`🤖 DeepSeek đang suy luận (lượt ${turn + 1})...`);
+    onProgress?.(`🤖 Gemini đang suy luận (lượt ${turn + 1})...`);
 
-    const response = await deepseek.chat.completions.create({
-      model: DEEPSEEK_MODEL,
-      messages,
-      tools: openaiTools,
-      tool_choice: "auto",
-      temperature: 0.7,
-      max_tokens: 4096,
+    const response = await googleAI.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        tools: [{ functionDeclarations }],
+        temperature: 0.7,
+        maxOutputTokens: 4096,
+      },
     });
 
-    const choice = response.choices[0];
-    if (!choice) throw new Error("DeepSeek không trả về kết quả.");
+    const candidate = response.candidates?.[0];
+    const message = candidate?.content;
+    if (!message) {
+      throw new Error(
+        `Gemini không trả về kết quả (finishReason: ${candidate?.finishReason ?? "?"}).`
+      );
+    }
 
-    const assistantMsg = choice.message;
-    messages.push(assistantMsg as ChatCompletionMessageParam);
+    contents.push(message);
 
-    // DeepSeek yêu cầu gọi tool
-    if (assistantMsg.tool_calls && assistantMsg.tool_calls.length > 0) {
-      for (const toolCall of assistantMsg.tool_calls) {
-        // Narrow union: chỉ xử lý tool call dạng "function"
-        if (toolCall.type !== 'function') continue;
-        const fnCall = toolCall as { id: string; type: 'function'; function: { name: string; arguments: string } };
-        const toolName = fnCall.function.name;
+    // Gemini yêu cầu gọi tool
+    const functionCalls = (message.parts ?? []).filter((p) => p.functionCall);
+
+    if (functionCalls.length > 0) {
+      const functionResponses: Content["parts"] = [];
+
+      for (const part of functionCalls) {
+        const fc = part.functionCall!;
+        const toolName = fc.name ?? "";
         onProgress?.(`🔧 Gọi tool: ${toolName}`);
-
-        let toolArgs: Record<string, unknown> = {};
-        try {
-          toolArgs = JSON.parse(fnCall.function.arguments);
-        } catch {
-          toolArgs = {};
-        }
-
 
         // Gọi tool qua MCP Client
         const toolResult = await mcpClient.callTool({
           name: toolName,
-          arguments: toolArgs,
+          arguments: fc.args ?? {},
         });
 
-        // Trả kết quả tool về cho DeepSeek
-        const toolContent =
-          Array.isArray(toolResult.content) && toolResult.content.length > 0
-            ? (toolResult.content[0] as any).text ?? JSON.stringify(toolResult.content)
-            : JSON.stringify(toolResult);
+        // Trả kết quả tool về cho Gemini
+        const text = extractToolText(toolResult);
+        let responseObj: Record<string, unknown>;
+        try {
+          responseObj = JSON.parse(text);
+        } catch {
+          responseObj = { output: text };
+        }
 
-        messages.push({
-          role: "tool",
-          tool_call_id: fnCall.id,
-          content: toolContent,
+        functionResponses.push({
+          functionResponse: { id: fc.id, name: toolName, response: responseObj },
         });
 
         onProgress?.(`✅ Tool ${toolName} trả kết quả thành công`);
       }
 
-      // Tiếp tục vòng lặp để DeepSeek xử lý kết quả tool
+      contents.push({ role: "user", parts: functionResponses });
+
+      // Tiếp tục vòng lặp để Gemini xử lý kết quả tool
       continue;
     }
 
-    // DeepSeek trả nội dung cuối (không có tool_calls)
-    const content = assistantMsg.content ?? "";
+    // Gemini trả nội dung cuối (không có functionCall)
+    const content = (message.parts ?? [])
+      .filter((p) => p.text)
+      .map((p) => p.text)
+      .join("");
     onProgress?.("📦 Đang parse JSON kết quả...");
 
     // Loại bỏ markdown code block nếu có (phòng ngừa)
@@ -161,7 +197,7 @@ export async function generateQuestionPack(
       onProgress?.("✨ Đã tạo bộ câu hỏi thành công!");
       return pack;
     } catch (e) {
-      throw new Error(`DeepSeek trả về nội dung không phải JSON hợp lệ:\n${content.slice(0, 300)}`);
+      throw new Error(`Gemini trả về nội dung không phải JSON hợp lệ:\n${content.slice(0, 300)}`);
     }
   }
 
