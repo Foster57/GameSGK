@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=5173 --host=0.0.0.0",
     "server": "tsx server/index.ts",
-    "dev:all": "tsx server/index.ts & vite --port=3000 --host=0.0.0.0",
+    "dev:all": "tsx server/index.ts & vite --port=5173 --host=0.0.0.0",
     "build": "vite build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
