@@ -1,7 +1,7 @@
 /**
  * MCP Server: Question Pack Tools
  *
- * Cung cấp 2 tools cho Gemini Agent:
+ * Cung cấp 2 tools cho AI Agent:
  *   1. get_pack_schema_and_examples  – Trả về schema + ví dụ mẫu đầy đủ 4 dạng câu hỏi
  *   2. validate_question_pack        – Kiểm tra QuestionPack hợp lệ theo types.ts
  */
@@ -18,11 +18,11 @@ import {
 
 type QuestionType = "fill_blank" | "categorize" | "matching" | "ordering";
 
-interface FillBlankSlot   { id: string; correctAnswer: string; }
-interface CategoryBucket  { id: string; name: string; description?: string; color?: string; }
-interface CategoryItem    { id: string; text: string; targetCategoryId: string; }
-interface MatchPair       { id: string; left: string; right: string; leftSubtext?: string; rightSubtext?: string; }
-interface OrderItem       { id: string; text: string; detail?: string; correctPosition: number; }
+interface FillBlankSlot { id: string; correctAnswer: string; }
+interface CategoryBucket { id: string; name: string; description?: string; color?: string; }
+interface CategoryItem { id: string; text: string; targetCategoryId: string; }
+interface MatchPair { id: string; left: string; right: string; leftSubtext?: string; rightSubtext?: string; }
+interface OrderItem { id: string; text: string; detail?: string; correctPosition: number; }
 
 // ──────────────────────────────────────────────────────────────
 // Validation
@@ -33,13 +33,13 @@ function validatePack(pack: any): { valid: boolean; errors: string[] } {
 
   // Pack-level
   if (!pack || typeof pack !== "object") return { valid: false, errors: ["pack phải là object."] };
-  if (!pack.id)          errors.push("Thiếu pack.id.");
-  if (!pack.title)       errors.push("Thiếu pack.title.");
+  if (!pack.id) errors.push("Thiếu pack.id.");
+  if (!pack.title) errors.push("Thiếu pack.title.");
   if (!pack.description) errors.push("Thiếu pack.description.");
-  if (!pack.category)    errors.push("Thiếu pack.category.");
+  if (!pack.category) errors.push("Thiếu pack.category.");
   if (!["Dễ", "Trung bình", "Nâng cao"].includes(pack.difficulty))
     errors.push(`pack.difficulty không hợp lệ: "${pack.difficulty}". Phải là "Dễ" | "Trung bình" | "Nâng cao".`);
-  if (!pack.icon)  errors.push('Thiếu pack.icon (ví dụ: "Sparkles", "Atom", "Layers").');
+  if (!pack.icon) errors.push('Thiếu pack.icon (ví dụ: "Sparkles", "Atom", "Layers").');
   if (!pack.color) errors.push('Thiếu pack.color (ví dụ: "indigo", "emerald", "amber").');
 
   if (!Array.isArray(pack.questions) || pack.questions.length === 0) {
@@ -52,7 +52,7 @@ function validatePack(pack: any): { valid: boolean; errors: string[] } {
   for (const [i, q] of pack.questions.entries()) {
     const pre = `Câu ${i + 1} [${q.type ?? "?"}][id="${q.id ?? "?"}"]`;
 
-    if (!q.id)    errors.push(`${pre}: Thiếu "id".`);
+    if (!q.id) errors.push(`${pre}: Thiếu "id".`);
     if (!q.title) errors.push(`${pre}: Thiếu "title".`);
 
     if (!q.type || !VALID_TYPES.includes(q.type)) {
@@ -68,7 +68,7 @@ function validatePack(pack: any): { valid: boolean; errors: string[] } {
         errors.push(`${pre}: "slots" phải là mảng có ít nhất 1 phần tử.`);
       } else {
         for (const slot of q.slots as FillBlankSlot[]) {
-          if (!slot.id)            errors.push(`${pre}: slot thiếu "id".`);
+          if (!slot.id) errors.push(`${pre}: slot thiếu "id".`);
           if (!slot.correctAnswer) errors.push(`${pre}: slot thiếu "correctAnswer".`);
           // Placeholder [slotId] PHẢI có trong templateText
           if (q.templateText && !q.templateText.includes(`[${slot.id}]`))
@@ -201,9 +201,9 @@ const EXAMPLE_JSON = JSON.stringify({
       title: "Ghép đôi Triều đại – Vị Vua",
       instruction: "Kéo tên vua sang triều đại tương ứng.",
       pairs: [
-        { id: "p1", left: "Triều Lý",     right: "Lý Thái Tổ",     leftSubtext: "1009–1225" },
-        { id: "p2", left: "Triều Trần",   right: "Trần Thái Tông", leftSubtext: "1225–1400" },
-        { id: "p3", left: "Triều Nguyễn", right: "Gia Long",       leftSubtext: "1802–1945" }
+        { id: "p1", left: "Triều Lý", right: "Lý Thái Tổ", leftSubtext: "1009–1225" },
+        { id: "p2", left: "Triều Trần", right: "Trần Thái Tông", leftSubtext: "1225–1400" },
+        { id: "p3", left: "Triều Nguyễn", right: "Gia Long", leftSubtext: "1802–1945" }
       ],
       distractors: ["Ngô Quyền", "Đinh Tiên Hoàng"],
       hint: "Triều Lý do Lý Công Uẩn (Lý Thái Tổ) lập năm 1009.",
@@ -216,9 +216,9 @@ const EXAMPLE_JSON = JSON.stringify({
       title: "Sắp xếp Triều đại theo Thời Gian",
       instruction: "Kéo thả sắp xếp theo thứ tự thời gian từ sớm đến muộn.",
       items: [
-        { id: "o1", text: "Nhà Ngô",  detail: "938–965",   correctPosition: 0 },
-        { id: "o2", text: "Nhà Đinh", detail: "968–980",   correctPosition: 1 },
-        { id: "o3", text: "Nhà Lý",   detail: "1009–1225", correctPosition: 2 },
+        { id: "o1", text: "Nhà Ngô", detail: "938–965", correctPosition: 0 },
+        { id: "o2", text: "Nhà Đinh", detail: "968–980", correctPosition: 1 },
+        { id: "o3", text: "Nhà Lý", detail: "1009–1225", correctPosition: 2 },
         { id: "o4", text: "Nhà Trần", detail: "1225–1400", correctPosition: 3 }
       ],
       hint: "Ngô → Đinh → (Tiền Lê) → Lý → Trần...",
@@ -231,14 +231,14 @@ const EXAMPLE_JSON = JSON.stringify({
       title: "Phân loại Nhân vật theo Thời Kỳ",
       instruction: "Kéo tên nhân vật vào đúng thời kỳ lịch sử.",
       categories: [
-        { id: "phong-kien", name: "Thời kỳ Phong kiến",       description: "Trước 1858", color: "amber" },
-        { id: "can-hien-dai", name: "Thời kỳ Cận – Hiện đại", description: "Từ 1858",    color: "indigo" }
+        { id: "phong-kien", name: "Thời kỳ Phong kiến", description: "Trước 1858", color: "amber" },
+        { id: "can-hien-dai", name: "Thời kỳ Cận – Hiện đại", description: "Từ 1858", color: "indigo" }
       ],
       items: [
-        { id: "h1", text: "Trần Hưng Đạo", targetCategoryId: "phong-kien"    },
-        { id: "h2", text: "Nguyễn Trãi",   targetCategoryId: "phong-kien"    },
-        { id: "h3", text: "Hồ Chí Minh",   targetCategoryId: "can-hien-dai"  },
-        { id: "h4", text: "Phan Bội Châu", targetCategoryId: "can-hien-dai"  }
+        { id: "h1", text: "Trần Hưng Đạo", targetCategoryId: "phong-kien" },
+        { id: "h2", text: "Nguyễn Trãi", targetCategoryId: "phong-kien" },
+        { id: "h3", text: "Hồ Chí Minh", targetCategoryId: "can-hien-dai" },
+        { id: "h4", text: "Phan Bội Châu", targetCategoryId: "can-hien-dai" }
       ],
       hint: "Trần Hưng Đạo (thế kỷ 13), Nguyễn Trãi (thế kỷ 15) là phong kiến.",
       explanation: "Hồ Chí Minh và Phan Bội Châu hoạt động sau 1858 – thời cận hiện đại.",

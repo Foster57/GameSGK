@@ -1,11 +1,12 @@
 /**
  * Express API Server
- * Cung cấp endpoint để frontend React gọi tạo bộ câu hỏi bằng AI.
+ * Cung cấp endpoint để frontend React gọi tạo bộ câu hỏi bằng AI (qua OpenRouter).
  */
 
 import "dotenv/config";
 import express, { Request, Response } from "express";
 import { generateQuestionPack } from "./agent/agentRunner.js";
+import { OPENROUTER_MODEL } from "./agent/openAI.js";
 
 const app = express();
 app.use(express.json());
@@ -93,7 +94,7 @@ app.post("/api/ai/generate-pack/stream", async (req: Request, res: Response) => 
 // Health check
 // ──────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash" });
+  res.json({ status: "ok", model: OPENROUTER_MODEL });
 });
 
 // ──────────────────────────────────────────────────────────
@@ -101,7 +102,8 @@ app.get("/api/health", (_req, res) => {
 // ──────────────────────────────────────────────────────────
 const PORT = Number(process.env.PORT ?? 3001);
 app.listen(PORT, () => {
+  const hasKey = !!process.env.OPENROUTER_API_KEY;
   console.log(`✅ AI Server đang chạy tại http://localhost:${PORT}`);
-  console.log(`   Gemini Model     : ${process.env.GEMINI_MODEL ?? "gemini-3.0-flash"}`);
-  console.log(`   API Key          : ${process.env.GEMINI_API_KEY ? "✓ đã cấu hình" : "⚠ chưa cấu hình!"}`);
+  console.log(`   Model            : ${OPENROUTER_MODEL}`);
+  console.log(`   OpenRouter Key   : ${hasKey ? "✓ đã cấu hình" : "⚠ chưa cấu hình!"}`);
 });
