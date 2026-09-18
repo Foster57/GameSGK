@@ -36,22 +36,32 @@ app.post("/api/ai/generate-pack", async (req: Request, res: Response) => {
     return;
   }
 
+  const controller = new AbortController();
+  let disconnected = false;
+  req.on("close", () => {
+    disconnected = true;
+    controller.abort();
+  });
+
   try {
     const steps: string[] = [];
     const pack = await generateQuestionPack({
       prompt: prompt.trim(),
+      signal: controller.signal,
       onProgress: (step) => {
         console.log(`[Agent] ${step}`);
         steps.push(step);
       },
     });
 
+    if (disconnected) return;
     res.json({ success: true, pack, steps });
   } catch (err: any) {
     console.error("[Agent Error]", err);
+    if (disconnected) return;
     res.status(500).json({
       success: false,
-      error: err.message ?? "Lỗi không xác định khi tạo bộ câu hỏi.",
+      error: err?.message ?? "Lỗi không xác định khi tạo bộ câu hỏi.",
     });
   }
 });
@@ -73,18 +83,26 @@ app.post("/api/ai/generate-pack/stream", async (req: Request, res: Response) => 
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
+  const controller = new AbortController();
+  let disconnected = false;
+  req.on("close", () => {
+    disconnected = true;
+    controller.abort();
+  });
+
   const send = (data: object) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (!disconnected) res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
   try {
     const pack = await generateQuestionPack({
       prompt: prompt.trim(),
+      signal: controller.signal,
       onProgress: (step) => send({ type: "progress", step }),
     });
-    send({ type: "done", pack });
+    if (!disconnected) send({ type: "done", pack });
   } catch (err: any) {
-    send({ type: "error", error: err.message });
+    if (!disconnected) send({ type: "error", error: err?.message });
   } finally {
     res.end();
   }

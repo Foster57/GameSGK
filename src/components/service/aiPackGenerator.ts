@@ -35,7 +35,8 @@ export function generatePackWithAIStream(
   prompt: string,
   callbacks: StreamCallbacks
 ): () => void {
-  let aborted = false;
+  const controller = new AbortController();
+  let settled = false;
 
   (async () => {
     try {
@@ -43,6 +44,7 @@ export function generatePackWithAIStream(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) throw new Error(`Server lỗi: ${res.status}`);
@@ -51,26 +53,34 @@ export function generatePackWithAIStream(
       const decoder = new TextDecoder();
       let buffer = '';
 
-      while (!aborted) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            if (event.type === 'progress') callbacks.onProgress(event.step);
-            else if (event.type === 'done')  callbacks.onDone(event.pack);
-            else if (event.type === 'error') callbacks.onError(event.error);
-          } catch { /* bỏ qua dòng parse lỗi */ }
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (!settled) {
+                if (event.type === 'progress') callbacks.onProgress(event.step);
+                else if (event.type === 'done') { settled = true; callbacks.onDone(event.pack); }
+                else if (event.type === 'error') { settled = true; callbacks.onError(event.error); }
+              }
+            } catch { /* bỏ qua dòng parse lỗi */ }
+          }
         }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+        throw err;
       }
     } catch (err: any) {
-      if (!aborted) callbacks.onError(err.message ?? 'Lỗi kết nối server.');
+      if (!settled && !controller.signal.aborted)
+        callbacks.onError(err?.message ?? 'Lỗi kết nối server.');
     }
   })();
 
-  return () => { aborted = true; };
+  return () => { settled = true; controller.abort(); };
 }

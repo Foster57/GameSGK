@@ -23,7 +23,7 @@ export function getOpenRouterClient(): OpenAI {
     baseURL,
     apiKey,
     defaultHeaders: {
-      "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+      "HTTP-Referer": process.env.APP_URL || "http://localhost:5173",
       "X-Title": "GameSGK Question Generator",
     },
   });
@@ -46,4 +46,4 @@ export const openai = new Proxy({} as OpenAI, {
 
 /** Model sử dụng trên OpenRouter – override qua env OPENROUTER_MODEL nếu cần */
 export const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
+  process.env.OPENROUTER_MODEL || "openrouter/free";
